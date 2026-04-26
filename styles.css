@@ -1,3 +1,27 @@
-body{
-    background-color: black;
+html{
+    font-family: proxima-nova, sans-serif;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+h1 {
+    display: flex;
+    justify-content: center;
+    text-align: center;
+    text-decoration: bold;
+    font: Arial, sans-serif; 
+}
+
+#simulationButton, #conceptButton {
+    color: black;
+    background-color: grey;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 10px;
+}
+
+#simulationButton:Hover, #conceptButton:hover {
+    background-color: rgb(172, 172, 172);
+    transform: translateY(-1px);
 }
