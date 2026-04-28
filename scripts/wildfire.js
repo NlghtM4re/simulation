@@ -313,5 +313,7 @@ function stopSim() {
 initializeGrid(gridSizeRange.value);
 updateControlLabels();
 randomWindDirection();
+// Show wind direction value by default
+windDirectionValue.textContent = windDirectionSlider.value + '°';
 drawGrid();
 startSim();
