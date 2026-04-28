@@ -1,3 +1,7 @@
+const windDirectionSlider = document.getElementById('windDirection');
+const windDirectionValue = document.getElementById('windDirectionValue');
+const windFlickerStrengthRange = document.getElementById('windFlickerStrengthRange');
+const windFlickerStrength = document.getElementById('windFlickerStrength');
 const canvas = document.getElementById('wildfireCanvas');
 const ctx = canvas.getContext('2d');
 const speedRange = document.getElementById('speedRange');
@@ -8,22 +12,46 @@ const igniteProb = document.getElementById('igniteProb');
 const igniteRange = document.getElementById('igniteRange');
 const growSpeedRange = document.getElementById('growSpeedRange');
 const growSpeedValue = document.getElementById('growSpeedValue');
-let growInterval = null;
-
+const windRange = document.getElementById('windRange');
+const windValue = document.getElementById('windValue');
 const cellSize = 10;
+
+let windDirection = 0;
+let windDirectionDeg = 0;
+let growInterval = null;
+let lightningAccumulator = 0;
 let drift = 0;
 let collumns = Number(gridSizeRange.value);
 let rows = Number(gridSizeRange.value);
-    
 let simInterval = null;
-
 let grid = [];
+
+Object.defineProperty(window, 'windStrength', {
+    get() { return Number(windRange.value); },
+    configurable: true
+});
+
+Object.defineProperty(window, 'windFlickerStrength', {
+    get() { return Number(windFlickerStrengthRange.value); },
+    configurable: true
+});
+
+function updateWindFlickerStrengthLabel() {
+    windFlickerStrength.textContent = windFlickerStrengthRange.value + '°';
+}
+windFlickerStrengthRange.addEventListener('input', updateWindFlickerStrengthLabel);
+
+updateWindFlickerStrengthLabel();
 
 speedRange.addEventListener('input', () => {
     updateControlLabels();
     if (simInterval) {
         startSim();
     }
+});
+
+windRange.addEventListener('input', () => {
+    updateControlLabels();
 });
 
 gridSizeRange.addEventListener('input', () => {
@@ -38,6 +66,16 @@ gridSizeRange.addEventListener('input', () => {
     }
 });
 
+windDirectionSlider.addEventListener('input', () => {
+    if (customWindToggle.checked) {
+        setWindDirection(Number(windDirectionSlider.value));
+    }
+});
+
+windDirectionSlider.addEventListener('input', () => {
+    windDirectionValue.textContent = windDirectionSlider.value + '°';
+});
+
 igniteRange.addEventListener('input', () => {
     updateControlLabels();
 });
@@ -49,11 +87,31 @@ growSpeedRange.addEventListener('input', () => {
     }
 });
 
+function getWindVector() {
+    const rad = windDirectionDeg * Math.PI / 180;
+    return { x: Math.sin(rad), y: -Math.cos(rad) };
+}
+
+function setWindDirection(degrees) {
+    windDirectionDeg = degrees;
+    // Update compass needle
+    const needle = document.getElementById('compassNeedle');
+    if (needle) {
+        needle.style.transform = `translate(-50%, -90%) rotate(${degrees}deg)`;
+    }
+}
+
+function randomWindDirection() {
+    const randomDeg = windDirectionDeg + (Math.random() * 360 - 45);
+    setWindDirection(randomDeg);
+}
+
 function updateControlLabels() {
-    speedValue.textContent = `${speedRange.value} ms`; // Updated to reflect new range
+    speedValue.textContent = `${speedRange.value} ms`;
     igniteProb.textContent = Number(igniteRange.value).toFixed(2);
     gridSizeValue.textContent = `${gridSizeRange.value} x ${gridSizeRange.value}`;
-    growSpeedValue.textContent = `${growSpeedRange.value} ms`; // Updated to reflect new range
+    growSpeedValue.textContent = `${growSpeedRange.value} ms`; 
+    windValue.textContent = Number(windRange.value).toFixed(2);
 }
 
 function initializeGrid(size) {
@@ -119,13 +177,14 @@ function startFire() {
 
 function spreadFire() {
     const newGrid = Array.from({ length: rows }, () => Array.from({ length: collumns }, () => 0));
+    const windStrength = Number(windRange.value); // 0 to 1
+    const windVec = getWindVector();
 
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < collumns; c++) {
             const cell = grid[r][c];
             if (cell === 2) {
                 newGrid[r][c] = 3;
-                // Spread fire to all 8 neighbors if they are trees
                 for (let dr = -1; dr <= 1; dr++) {
                     for (let dc = -1; dc <= 1; dc++) {
                         if (dr === 0 && dc === 0) continue; // skip self
@@ -133,22 +192,37 @@ function spreadFire() {
                         const nc = c + dc;
                         if (nr >= 0 && nr < rows && nc >= 0 && nc < collumns) {
                             if (grid[nr][nc] === 1) {
-                                newGrid[nr][nc] = 2; // tree becomes burning
+                                // Wind bias: boost spread chance in wind direction
+                                let spreadProb = 1;
+                                if (windStrength > 0 && (dr !== 0 || dc !== 0)) {
+                                    // Direction vector from fire to neighbor
+                                    const dirLen = Math.sqrt(dr*dr + dc*dc);
+                                    const dirX = dc / dirLen;
+                                    const dirY = dr / dirLen;
+                                    // Dot product with wind vector
+                                    const dot = dirX * windVec.x + dirY * windVec.y;
+                                    // If aligned with wind, boost probability
+                                    if (dot > 0.7) spreadProb += windStrength * 2; // strong boost if close to wind
+                                    else if (dot > 0.3) spreadProb += windStrength; // moderate boost
+                                    else if (dot < -0.7) spreadProb -= windStrength * 0.7; // against wind, reduce
+                                }
+                                if (Math.random() < spreadProb) {
+                                    newGrid[nr][nc] = 2;
+                                }
                             }
                         }
                     }
                 }
             } else if (cell === 3) {
-                newGrid[r][c] = 4; // burned becomes empty
-
+                newGrid[r][c] = 4;
             } else if (cell === 4) {
-                newGrid[r][c] = 5; // burned becomes empty
+                newGrid[r][c] = 5; 
             } else if (cell === 5) {
-                newGrid[r][c] = 0; // burned becomes empty
+                newGrid[r][c] = 0; 
             }else if (cell === 1 && newGrid[r][c] !== 2) {
-                newGrid[r][c] = 1; // keep as tree unless set to burning above
+                newGrid[r][c] = 1;
             } else if (cell === 0) {
-                newGrid[r][c] = 0; // empty stays empty
+                newGrid[r][c] = 0;
             }
         }
     }
@@ -174,13 +248,25 @@ function startSim() {
     const fireSpeed = Number(speedRange.value);
     const treeSpeed = Number(growSpeedRange.value);
 
+    lightningAccumulator = 0;
+
     simInterval = setInterval(() => {
         spreadFire();
-        // Adjust lightning probability per tick to keep rate per second consistent
+        if (flickeringWindToggle.checked) {
+            const flicker = Number(windFlickerStrengthRange.value);
+            setWindDirection(windDirectionDeg + (Math.random() * flicker - flicker / 2));
+        }
+        // Lightning accumulator method for consistent strikes per second
         const baseLightningProb = Number(igniteRange.value); // per second
-        const lightningProbPerTick = 1 - Math.pow(1 - baseLightningProb, fireSpeed / 1000);
-        if (Math.random() < lightningProbPerTick) {
+        lightningAccumulator += baseLightningProb * (fireSpeed / 1000);
+        while (lightningAccumulator >= 1) {
             startFire();
+            lightningAccumulator -= 1;
+        }
+        // Small chance for fractional part
+        if (Math.random() < lightningAccumulator) {
+            startFire();
+            lightningAccumulator = 0;
         }
     }, fireSpeed);
 
@@ -226,5 +312,6 @@ function stopSim() {
 
 initializeGrid(gridSizeRange.value);
 updateControlLabels();
+randomWindDirection();
 drawGrid();
 startSim();
