@@ -73,11 +73,15 @@ body {
 }
 
 .gravity-grid {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 1rem;
+    display: flex;
+    justify-content: center;
     margin-top: 1rem;
-    align-items: start;
+}
+
+#gravityCanvas {
+    display: block;
+    margin: 0 auto;
+    border-radius: 12px;
 }
 
 .gravity-grid > .panel,
