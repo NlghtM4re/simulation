@@ -1,3 +1,11 @@
+/* Center the p5.js canvas on the page */
+#gravityCanvas {
+    display: block;
+    margin: 0 auto;
+    margin-top: 40px;
+    border: 2px solid #333;
+    box-shadow: 0 0 10px #aaa;
+}
 :root {
     --color-bg-top: #f7f4ec;
     --color-bg-bottom: #e9f0f6;

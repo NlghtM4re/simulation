@@ -289,7 +289,7 @@ function growTree(){
             }
         }
     }
-    // Growth factor: percent of grid to fill per interval (tweakable)
+    // Growth factor: percent of grid to fill per interval
     const growthFactor = 0.005; // 0.5% of grid per interval
     const numToGrow = Math.max(1, Math.floor(collumns * rows * growthFactor));
     for (let i = 0; i < numToGrow && emptyCells.length > 0; i++) {
@@ -313,7 +313,6 @@ function stopSim() {
 initializeGrid(gridSizeRange.value);
 updateControlLabels();
 randomWindDirection();
-// Show wind direction value by default
 windDirectionValue.textContent = windDirectionSlider.value + '°';
 drawGrid();
 startSim();
